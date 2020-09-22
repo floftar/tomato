@@ -1,0 +1,61 @@
+#!/bin/sh
+
+TIMER_MINUTES=25
+LOCK_DIR=/tmp/tomato.lock
+PID_FILE="${LOCK_DIR}/pid"
+
+show_usage() {
+    echo "Usage: $0 [stop]"
+    exit 1
+}
+
+sleep_minutes() {
+    minutes=$(($1 * 60))
+    sleep $minutes
+}
+
+remove_lock() {
+    rm -r "$LOCK_DIR"
+}
+
+start_timer() {
+    {
+        sleep_minutes $TIMER_MINUTES
+        remove_lock
+        notify-send 🍅 "Take a break" --urgency=critical -t 0
+    } &
+
+    echo $! > $PID_FILE
+    echo "Time for work"
+}
+
+stop_timer() {
+    if [ -e "$PID_FILE" ]; then
+        pid=$(cat "$PID_FILE")
+        kill "$pid"
+        remove_lock
+    fi
+}
+
+check_if_running() {
+    if ! mkdir $LOCK_DIR 2>/dev/null; then
+        echo "Already started" >&2
+        exit
+    fi
+}
+
+if [ $# -gt 1 ]; then
+    show_usage
+fi
+
+if [ $# -eq 1 ]; then
+    if [ "$1" = "stop" ]; then
+        stop_timer
+        exit
+    else
+        show_usage
+    fi
+fi
+
+check_if_running
+start_timer
